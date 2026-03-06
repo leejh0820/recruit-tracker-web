@@ -58,7 +58,7 @@ export default function Home() {
     memo: "",
   });
 
-  const apiBase = "http://127.0.0.1:8000";
+  const apiBase = "/api";
 
   useEffect(() => {
     const fetchApplications = async () => {
@@ -197,6 +197,23 @@ export default function Home() {
       work_type: work_type || prev.work_type,
       job_description: rawText,
     }));
+  };
+
+  const handleStatusChange = async (id: number, newStatus: string) => {
+    try {
+      const res = await fetch(`${apiBase}/applications/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) throw new Error(`단계 변경 실패 (${res.status})`);
+      const updated: Application = await res.json();
+      setApplications((prev) =>
+        prev.map((a) => (a.id === id ? updated : a))
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "단계 변경 중 오류");
+    }
   };
 
   const autoFillFromUrl = async () => {
@@ -571,8 +588,22 @@ export default function Home() {
                       <td>{app.location}</td>
                       <td>{app.work_type}</td>
                       <td>{app.salary}</td>
-                      <td>
-                        <span className={statusClass}>{app.status}</span>
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <select
+                          className={`status-pill status-select ${statusClass}`}
+                          value={app.status}
+                          onChange={(e) =>
+                            handleStatusChange(app.id, e.target.value)
+                          }
+                        >
+                          <option value="interested">관심</option>
+                          <option value="applied">지원완료</option>
+                          <option value="oa">OA</option>
+                          <option value="interview1">1차면접</option>
+                          <option value="interview2">2차면접</option>
+                          <option value="offer">오퍼</option>
+                          <option value="rejected">리젝트</option>
+                        </select>
                       </td>
                       <td>{app.applied ? "Y" : "N"}</td>
                       <td>

@@ -43,6 +43,21 @@ class ApplicationCreate(ApplicationBase):
     pass
 
 
+class ApplicationUpdate(BaseModel):
+    applied_date: Optional[date] = None
+    source: Optional[str] = None
+    company: Optional[str] = None
+    position_title: Optional[str] = None
+    location: Optional[str] = None
+    work_type: Optional[str] = None
+    salary: Optional[str] = None
+    applied: Optional[bool] = None
+    status: Optional[str] = None
+    job_description: Optional[str] = None
+    job_url: Optional[HttpUrl] = None
+    memo: Optional[str] = None
+
+
 class Application(ApplicationBase):
     id: int
 
@@ -270,4 +285,55 @@ def create_application(app_data: ApplicationCreate):
         app_id = cur.lastrowid
 
     return Application(id=app_id, **app_data.model_dump())
+
+
+@app.patch("/applications/{application_id}", response_model=Application)
+def update_application(application_id: int, app_data: ApplicationUpdate):
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT * FROM applications WHERE id = ?", (application_id,)
+        ).fetchone()
+        if row is None:
+            raise HTTPException(status_code=404, detail="Application not found")
+
+        data = app_data.model_dump(exclude_unset=True)
+        if not data:
+            return get_application(application_id)
+
+        set_parts = []
+        values = []
+        for key, val in data.items():
+            if key == "applied_date":
+                set_parts.append("applied_date = ?")
+                values.append(val.isoformat())
+            elif key == "applied":
+                set_parts.append("applied = ?")
+                values.append(1 if val else 0)
+            elif key == "job_url":
+                set_parts.append("job_url = ?")
+                values.append(str(val) if val else None)
+            else:
+                set_parts.append(f"{key} = ?")
+                values.append(val)
+
+        values.append(application_id)
+        conn.execute(
+            f"UPDATE applications SET {', '.join(set_parts)} WHERE id = ?",
+            values,
+        )
+        conn.commit()
+
+    return get_application(application_id)
+
+
+@app.delete("/applications/{application_id}")
+def delete_application(application_id: int):
+    with get_connection() as conn:
+        cur = conn.execute(
+            "DELETE FROM applications WHERE id = ?", (application_id,)
+        )
+        conn.commit()
+        if cur.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Application not found")
+    return {"ok": True}
 
