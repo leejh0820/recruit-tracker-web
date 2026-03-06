@@ -126,21 +126,14 @@ recruit-tracker-web/
 
 - FastAPI + SQLite 기반 Application CRUD
 - Next.js 기반 UI (Cloud Dancer 팔레트)
-- URL/텍스트 기반 자동 채우기
-- 상세 페이지에서 공고 텍스트 자동 문단화
+- URL/텍스트 기반 자동 채우기 (LinkedIn 공고 텍스트 형식 지원)
+- 상세 페이지에서 공고 텍스트 자동 문단화 (섹션 카드)
+- 검색/필터/정렬, 리스트에서 단계 인라인 수정
+- LinkedIn URL 안내 메시지, 공고 텍스트 파서 개선
 
-### 다음으로 고려 중인 개선점 (초안)
+### 다음 개발 로드맵
 
-- 리멤버/원티드 등 **사이트별 전용 파서** 추가
-  - `공고소개 / 주요업무 / 자격요건 / 우대사항 / 복지 / 채용절차` 등을 카드로 분리
-- **검색/필터/정렬**
-  - 회사/직무 텍스트 검색
-  - 단계별(status) 필터
-  - 날짜 기준 정렬
-- **배포 준비**
-  - SQLite → Postgres 마이그레이션
-  - FastAPI: Render / Railway
-  - Next.js: Vercel
+자세한 내용은 [ROADMAP.md](./ROADMAP.md) 참고.
 
 ---
 
