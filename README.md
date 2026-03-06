@@ -1,4 +1,6 @@
-# Recruit Tracker
+# Recruit Tracker Web
+
+> **GitHub**: [leejh0820/recruit-tracker-web](https://github.com/leejh0820/recruit-tracker-web)
 
 개인/친구들이 함께 쓸 수 있는 **채용 지원 현황 관리 웹앱**입니다.  
 URL과 공고 텍스트를 붙여넣으면 날짜·출처·위치·근무형태 등을 최대한 자동으로 채워주고,  
@@ -35,6 +37,9 @@ URL과 공고 텍스트를 붙여넣으면 날짜·출처·위치·근무형태 
     - `rememberapp` → 리멤버, `wanted.co.kr` → 원티드 등
 - **리스트 & 상세 페이지**
   - 최근 지원 순 리스트
+  - **검색**: 회사·직무 텍스트로 필터
+  - **필터**: 단계(status)별 보기
+  - **정렬**: 최신순 / 오래된순
   - 행 클릭 시 상세 페이지로 이동
   - 공고 텍스트를 섹션 키워드(`주요업무`, `자격요건` 등)와 문장 길이에 따라 자동 분할해 가독성 높임
 
@@ -88,28 +93,23 @@ npm run dev
 
 ---
 
-## 5. GitHub에 올릴 때 구조
+## 5. 프로젝트 구조
 
 ```text
-recruit-tracker/
+recruit-tracker-web/
   backend/
     app/
       main.py
-    .venv/           # 보통 .gitignore 에서 제외
+    .venv/              # .gitignore 제외
+    recruit_tracker.db  # .gitignore 제외 (로컬 DB)
   frontend/
     src/app/...
   updates/
     2026-03-05-initial.md
+    2026-03-05-search-filter-sort.md
+  .gitignore
   README.md
 ```
-
-**추천 .gitignore (요약)**:
-
-- `backend/.venv/`
-- `__pycache__/`
-- `.DS_Store`
-- `frontend/node_modules/`
-- `recruit_tracker.db`
 
 ---
 
@@ -139,18 +139,8 @@ recruit-tracker/
 
 ---
 
-## 7. GitHub에 올리는 방법 (메모)
+## 7. GitHub
 
-```bash
-cd /path/to/recruit-tracker
-git init
-git add .
-git commit -m "chore: initial recruit tracker"
-git remote add origin https://github.com/<your-id>/recruit-tracker.git
-git push -u origin main
-```
-
-> 이미 상위 디렉터리에 Git 리포가 있다면,  
-> 이 폴더를 별도의 리포로 쓰고 싶을 경우 **GitHub에서 새 리포를 만들고**,  
-> `recruit-tracker` 폴더만 별도로 푸시하는 방식을 추천합니다.
+- **리포**: [leejh0820/recruit-tracker-web](https://github.com/leejh0820/recruit-tracker-web)
+- 크롬 확장 버전(`recruit-tracker`)과 구분되는 웹앱 버전입니다.
 

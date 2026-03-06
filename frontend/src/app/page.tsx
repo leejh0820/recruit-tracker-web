@@ -39,6 +39,9 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [rawText, setRawText] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
 
   const [form, setForm] = useState({
     applied_date: today,
@@ -222,7 +225,7 @@ export default function Home() {
         job_description?: string | null;
       } = await res.json();
 
-      const text = data.job_description || prev.job_description || "";
+      const text = data.job_description || form.job_description || "";
 
       // 위치, 근무형태는 공고 텍스트에서 추론
       let location = form.location;
@@ -260,7 +263,7 @@ export default function Home() {
         job_description: data.job_description || prev.job_description,
         location: location || prev.location,
         work_type: work_type || prev.work_type,
-        source: prev.source || inferSourceFromUrl(prev.job_url || ""),
+        source: form.source || inferSourceFromUrl(form.job_url || ""),
       }));
       setRawText(data.job_description || rawText);
     } catch (err) {
@@ -456,7 +459,7 @@ export default function Home() {
           <div>
             <div className="card-title">지원 리스트</div>
             <div className="card-caption">
-              최근에 추가한 지원 순으로 정리돼요
+              검색·필터·정렬로 원하는 지원만 골라보세요
             </div>
           </div>
         </div>
@@ -465,24 +468,79 @@ export default function Home() {
         ) : applications.length === 0 ? (
           <p className="card-caption">아직 등록된 지원이 없습니다.</p>
         ) : (
-          <div className="table-wrapper">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>날짜</th>
-                  <th>출처</th>
-                  <th>회사</th>
-                  <th>직무/포지션</th>
-                  <th>위치</th>
-                  <th>근무형태</th>
-                  <th>연봉/페이</th>
-                  <th>단계</th>
-                  <th>지원</th>
-                  <th>링크</th>
-                </tr>
-              </thead>
-              <tbody>
-                {applications.map((app) => {
+          <>
+            <div className="list-toolbar">
+              <input
+                className="input"
+                type="text"
+                placeholder="회사·직무 검색"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{ maxWidth: 180 }}
+              />
+              <select
+                className="select"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                style={{ maxWidth: 120 }}
+              >
+                <option value="">전체 단계</option>
+                <option value="interested">관심</option>
+                <option value="applied">지원완료</option>
+                <option value="oa">OA</option>
+                <option value="interview1">1차면접</option>
+                <option value="interview2">2차면접</option>
+                <option value="offer">오퍼</option>
+                <option value="rejected">리젝트</option>
+              </select>
+              <select
+                className="select"
+                value={sortOrder}
+                onChange={(e) =>
+                  setSortOrder(e.target.value as "newest" | "oldest")
+                }
+                style={{ maxWidth: 100 }}
+              >
+                <option value="newest">최신순</option>
+                <option value="oldest">오래된순</option>
+              </select>
+            </div>
+            <div className="table-wrapper">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>날짜</th>
+                    <th>출처</th>
+                    <th>회사</th>
+                    <th>직무/포지션</th>
+                    <th>위치</th>
+                    <th>근무형태</th>
+                    <th>연봉/페이</th>
+                    <th>단계</th>
+                    <th>지원</th>
+                    <th>링크</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {applications
+                    .filter((app) => {
+                      if (searchQuery.trim()) {
+                        const q = searchQuery.toLowerCase().trim();
+                        const match =
+                          (app.company || "").toLowerCase().includes(q) ||
+                          (app.position_title || "").toLowerCase().includes(q);
+                        if (!match) return false;
+                      }
+                      if (statusFilter && app.status !== statusFilter)
+                        return false;
+                      return true;
+                    })
+                    .sort((a, b) => {
+                      if (sortOrder === "newest")
+                        return b.applied_date.localeCompare(a.applied_date);
+                      return a.applied_date.localeCompare(b.applied_date);
+                    })
+                    .map((app) => {
                   const statusClass =
                     app.status === "applied" || app.status === "oa"
                       ? "status-pill status-pill--applied"
@@ -538,6 +596,7 @@ export default function Home() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </section>
     </div>

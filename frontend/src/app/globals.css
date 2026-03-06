@@ -330,6 +330,13 @@ a {
   margin-top: 6px;
 }
 
+.list-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
 .table-wrapper {
   margin-top: 4px;
   border-radius: 14px;
