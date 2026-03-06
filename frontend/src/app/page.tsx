@@ -142,51 +142,104 @@ export default function Home() {
 
     const lines = rawText.split("\n").map((l) => l.trim()).filter(Boolean);
     const firstLine = lines[0] || "";
+    const text = rawText;
 
-    // 회사명과 포지션은 첫 줄에서 괄호/대시 기준으로 대략 추출
+    // 회사명과 포지션 추출 (LinkedIn, 원티드 등 다양한 형식 지원)
     let company = form.company;
     let position_title = form.position_title;
+    let locationFromFirstLine: string | null = null;
 
     if (!company || !position_title) {
-      const dashSplit = firstLine.split(/[-–—]/);
-      if (dashSplit.length >= 2) {
-        const left = dashSplit[0].trim();
-        const right = dashSplit.slice(1).join("-").trim();
-        if (!company) company = left;
-        if (!position_title) position_title = right;
-      }
-    }
-
-    // 위치, 근무형태는 키워드 기반으로 대충 추출
-    let location = form.location;
-    if (!location) {
-      const locMatch = rawText.match(
-        /(서울|서울시|판교|수원|성남|성남시|분당구|부산|대전|대구|광주|인천)[^\n]*/
-      );
-      if (locMatch) {
-        let loc = locMatch[0].trim();
-        // '경력', '학력', '마감일' 같은 키워드에서 잘라내기
-        const stopWords = ["경력", "학력", "마감일", "D-", "간편 지원하기", "회사소개"];
-        for (const stop of stopWords) {
-          const idx = loc.indexOf(stop);
-          if (idx !== -1) {
-            loc = loc.slice(0, idx).trim();
+      // LinkedIn: "직무 at 회사" 또는 "회사 · 직무"
+      const atMatch = firstLine.match(/^(.+?)\s+at\s+(.+)$/i);
+      if (atMatch) {
+        if (!position_title) position_title = atMatch[1].trim();
+        if (!company) company = atMatch[2].trim();
+      } else {
+        const dotSplit = firstLine.split(/[\u00B7·]/); // middle dot
+        if (dotSplit.length >= 2) {
+          const a = dotSplit[0].trim();
+          const b = dotSplit.slice(1).join("·").trim();
+          if (!company) company = a;
+          if (!position_title) position_title = b;
+        } else {
+          const dashSplit = firstLine.split(/\s*[-–—]\s*/).map((s) => s.trim()).filter(Boolean);
+          if (dashSplit.length >= 3) {
+            // LinkedIn: "직무 - 회사 - 위치" (e.g. Solutions Architect - BytePlus - Seoul)
+            const part1 = dashSplit[0];
+            const part2 = dashSplit[1];
+            const part3 = dashSplit.slice(2).join(" - ");
+            const looksLikeLocation =
+              part3.length < 35 ||
+              /^(서울|Seoul|Busan|NYC|Remote|London|Singapore|Tokyo|Berlin|Paris|인천|대전|대구|광주)/i.test(part3);
+            if (looksLikeLocation) {
+              if (!position_title) position_title = part1;
+              if (!company) company = part2;
+              locationFromFirstLine = part3;
+            } else {
+              if (!company) company = part1;
+              if (!position_title) position_title = [part2, part3].filter(Boolean).join(" - ");
+            }
+          } else if (dashSplit.length >= 2) {
+            const left = dashSplit[0];
+            const right = dashSplit.slice(1).join(" - ");
+            if (!company) company = left;
+            if (!position_title) position_title = right;
           }
         }
-        // 문장 끝의 회사 주소 등은 과감히 잘라내기 위해 최대 길이 제한
-        if (loc.length > 30) {
-          loc = loc.slice(0, 30).trim();
-        }
-        location = loc;
       }
     }
 
+    // LinkedIn: 1줄=회사, 2줄=직무 형태
+    if ((!company || !position_title) && lines.length >= 2) {
+      const second = lines[1];
+      if (!company && firstLine.length < 60) company = firstLine;
+      if (!position_title && second && second.length < 80) position_title = second;
+    }
+
+    // 위치 추출: Location:, 위치:, 또는 도시명
+    let location = locationFromFirstLine || form.location;
+    if (!location) {
+      const locLabel = text.match(/(?:Location|위치|근무지)\s*[:\：]\s*([^\n]+)/i);
+      if (locLabel) {
+        location = locLabel[1].trim().slice(0, 50);
+      } else {
+        const locMatch = text.match(
+          /(서울|서울시|판교|수원|성남|성남시|분당구|부산|대전|대구|광주|인천|Seoul|Busan|Remote)[^\n]*/
+        );
+        if (locMatch) {
+          let loc = locMatch[0].trim();
+          const stopWords = ["경력", "학력", "마감일", "D-", "간편 지원하기", "회사소개", "Employment type"];
+          for (const stop of stopWords) {
+            const idx = loc.indexOf(stop);
+            if (idx !== -1) loc = loc.slice(0, idx).trim();
+          }
+          if (loc.length > 40) loc = loc.slice(0, 40).trim();
+          location = loc;
+        }
+      }
+    }
+
+    // 근무형태
     let work_type = form.work_type;
     if (!work_type) {
-      if (rawText.includes("정규직")) work_type = "정규직";
-      else if (rawText.includes("인턴")) work_type = "인턴";
-      else if (rawText.toLowerCase().includes("remote"))
-        work_type = "리모트";
+      const empMatch = text.match(/(?:Employment type|근무형태)\s*[:\：]\s*([^\n·]+)/i);
+      if (empMatch) {
+        const t = empMatch[1].trim().toLowerCase();
+        if (t.includes("full") || t.includes("정규")) work_type = "정규직";
+        else if (t.includes("part") || t.includes("계약")) work_type = "계약직";
+        else if (t.includes("intern")) work_type = "인턴";
+        else if (t.includes("contract")) work_type = "계약직";
+        else work_type = empMatch[1].trim().slice(0, 20);
+      } else {
+        if (text.includes("정규직")) work_type = "정규직";
+        else if (text.includes("인턴")) work_type = "인턴";
+        else if (text.includes("Full-time") || text.includes("Full time")) work_type = "정규직";
+        else if (text.includes("Part-time") || text.includes("Part time")) work_type = "계약직";
+        else if (text.includes("Contract")) work_type = "계약직";
+        else if (text.toLowerCase().includes("remote") || text.includes("리모트")) work_type = "리모트";
+        else if (text.includes("Hybrid") || text.includes("하이브리드")) work_type = "하이브리드";
+      }
     }
 
     setForm((prev) => ({
@@ -219,6 +272,12 @@ export default function Home() {
   const autoFillFromUrl = async () => {
     if (!form.job_url) {
       setError("먼저 공고 URL을 입력해 주세요.");
+      return;
+    }
+    if (form.job_url.toLowerCase().includes("linkedin.com")) {
+      setError(
+        "LinkedIn 공고는 URL에서 직접 가져올 수 없습니다. 공고 내용을 복사해서 '공고 텍스트로 자동 채우기'를 사용해 주세요."
+      );
       return;
     }
 

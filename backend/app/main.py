@@ -205,8 +205,18 @@ def get_application(application_id: int):
 
 @app.post("/applications/parse-from-url", response_model=ParsedApplication)
 def parse_from_url(payload: ParseFromUrlRequest):
+    url_str = str(payload.url).lower()
+    if "linkedin.com" in url_str:
+        raise HTTPException(
+            status_code=400,
+            detail="LinkedIn 공고는 페이지 구조 때문에 URL에서 직접 가져올 수 없습니다. 공고 내용을 복사해서 '공고 텍스트로 자동 채우기'를 사용해 주세요.",
+        )
     try:
-        resp = httpx.get(str(payload.url), timeout=10.0)
+        resp = httpx.get(
+            str(payload.url),
+            timeout=10.0,
+            headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"},
+        )
         resp.raise_for_status()
     except httpx.HTTPError as exc:
         raise HTTPException(status_code=400, detail=f"Failed to fetch URL: {exc}") from exc
