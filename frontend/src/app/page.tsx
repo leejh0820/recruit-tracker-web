@@ -60,23 +60,101 @@ export default function Home() {
 
   const apiBase = "/api";
 
-  useEffect(() => {
-    const fetchApplications = async () => {
-      try {
-        setLoading(true);
-        const res = await fetch(`${apiBase}/applications`);
-        if (!res.ok) {
-          throw new Error(`Failed to fetch applications (${res.status})`);
-        }
-        const data: Application[] = await res.json();
-        setApplications(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error");
-      } finally {
-        setLoading(false);
+  const filteredApplications = applications
+    .filter((app) => {
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const match =
+          (app.company || "").toLowerCase().includes(q) ||
+          (app.position_title || "").toLowerCase().includes(q);
+        if (!match) return false;
       }
-    };
+      if (statusFilter && app.status !== statusFilter) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortOrder === "newest")
+        return b.applied_date.localeCompare(a.applied_date);
+      return a.applied_date.localeCompare(b.applied_date);
+    });
 
+  const statusLabel: Record<string, string> = {
+    interested: "관심",
+    applied: "지원완료",
+    oa: "OA",
+    interview1: "1차면접",
+    interview2: "2차면접",
+    offer: "오퍼",
+    rejected: "리젝트",
+  };
+
+  const exportToCsv = () => {
+    const headers = [
+      "날짜",
+      "출처",
+      "회사",
+      "직무/포지션",
+      "위치",
+      "근무형태",
+      "연봉/페이",
+      "단계",
+      "지원완료",
+    ];
+    const escape = (v: string | null | undefined) => {
+      const s = String(v ?? "").replace(/"/g, '""');
+      return s.includes(",") || s.includes("\n") ? `"${s}"` : s;
+    };
+    const rows = filteredApplications.map((app) =>
+      [
+        app.applied_date,
+        app.source,
+        app.company,
+        app.position_title,
+        app.location,
+        app.work_type,
+        app.salary,
+        statusLabel[app.status] ?? app.status,
+        app.applied ? "Y" : "N",
+      ].map(escape).join(",")
+    );
+    const csv = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `recruit-tracker-${today}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const fetchApplications = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await fetch(`${apiBase}/applications`);
+      if (!res.ok) {
+        throw new Error(`서버 응답 오류 (${res.status})`);
+      }
+      const data: Application[] = await res.json();
+      setApplications(data);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      const isConnectionError =
+        msg.includes("Failed to fetch") ||
+        msg.includes("NetworkError") ||
+        msg.includes("Load failed") ||
+        (err instanceof TypeError && msg === "Failed to fetch");
+      setError(
+        isConnectionError
+          ? "백엔드 서버에 연결할 수 없습니다. 터미널에서 백엔드가 실행 중인지 확인해 주세요. (포트 8000)"
+          : msg
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchApplications();
   }, []);
 
@@ -530,6 +608,100 @@ export default function Home() {
         {error && <p className="error-text">{error}</p>}
       </section>
 
+      {applications.length > 0 && (
+        <section className="card card--muted dashboard-section">
+          <div className="card-header">
+            <div>
+              <div className="card-title">대시보드</div>
+              <div className="card-caption">
+                지원 현황 한눈에 보기
+              </div>
+            </div>
+          </div>
+          <div className="dashboard-grid">
+            <div className="dashboard-chart">
+              <div className="chart-title">단계별 지원 수</div>
+              <div className="chart-bars">
+                {(() => {
+                  const statusOrder = [
+                    "interested",
+                    "applied",
+                    "oa",
+                    "interview1",
+                    "interview2",
+                    "offer",
+                    "rejected",
+                  ] as const;
+                  const counts: Record<string, number> = {};
+                  applications.forEach((a) => {
+                    counts[a.status] = (counts[a.status] ?? 0) + 1;
+                  });
+                  const max = Math.max(1, ...Object.values(counts));
+                  return statusOrder.map((status) => {
+                    const count = counts[status] ?? 0;
+                    return (
+                      <div key={status} className="chart-row">
+                        <span className="chart-label">
+                          {statusLabel[status] ?? status}
+                        </span>
+                        <div className="chart-bar-wrap">
+                          <div
+                            className="chart-bar"
+                            style={{
+                              width: `${(count / max) * 100}%`,
+                              minWidth: count > 0 ? "24px" : "0",
+                            }}
+                          />
+                        </div>
+                        <span className="chart-value">{count}</span>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
+            <div className="dashboard-chart">
+              <div className="chart-title">월별 지원 수</div>
+              <div className="chart-bars">
+                {(() => {
+                  const byMonth: Record<string, number> = {};
+                  applications.forEach((a) => {
+                    const m = a.applied_date.slice(0, 7);
+                    byMonth[m] = (byMonth[m] ?? 0) + 1;
+                  });
+                  const months = Object.keys(byMonth).sort();
+                  const max = Math.max(1, ...Object.values(byMonth));
+                  return months.length > 0 ? (
+                    months.map((m) => {
+                      const count = byMonth[m];
+                      const [y, mo] = m.split("-");
+                      const label = `${y}년 ${parseInt(mo, 10)}월`;
+                      return (
+                        <div key={m} className="chart-row">
+                          <span className="chart-label">{label}</span>
+                          <div className="chart-bar-wrap">
+                            <div
+                              className="chart-bar chart-bar--month"
+                              style={{
+                                width: `${(count / max) * 100}%`,
+                                minWidth: count > 0 ? "24px" : "0",
+                              }}
+                            />
+                          </div>
+                          <span className="chart-value">{count}</span>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="card-caption">데이터 없음</p>
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       <section className="card card--muted">
         <div className="card-header">
           <div>
@@ -541,6 +713,16 @@ export default function Home() {
         </div>
         {loading ? (
           <p className="card-caption">불러오는 중...</p>
+        ) : error ? (
+          <div className="connection-error">
+            <p className="error-text">{error}</p>
+            <p className="card-caption" style={{ marginTop: 6 }}>
+              백엔드: <code>cd backend && uvicorn app.main:app --reload --port 8000</code>
+            </p>
+            <button type="button" onClick={fetchApplications} className="btn" style={{ marginTop: 8 }}>
+              다시 시도
+            </button>
+          </div>
         ) : applications.length === 0 ? (
           <p className="card-caption">아직 등록된 지원이 없습니다.</p>
         ) : (
@@ -580,6 +762,14 @@ export default function Home() {
                 <option value="newest">최신순</option>
                 <option value="oldest">오래된순</option>
               </select>
+              <button
+                type="button"
+                onClick={exportToCsv}
+                className="btn"
+                style={{ marginLeft: "auto" }}
+              >
+                CSV 내보내기
+              </button>
             </div>
             <div className="table-wrapper">
               <table className="table">
@@ -598,25 +788,7 @@ export default function Home() {
                   </tr>
                 </thead>
                 <tbody>
-                  {applications
-                    .filter((app) => {
-                      if (searchQuery.trim()) {
-                        const q = searchQuery.toLowerCase().trim();
-                        const match =
-                          (app.company || "").toLowerCase().includes(q) ||
-                          (app.position_title || "").toLowerCase().includes(q);
-                        if (!match) return false;
-                      }
-                      if (statusFilter && app.status !== statusFilter)
-                        return false;
-                      return true;
-                    })
-                    .sort((a, b) => {
-                      if (sortOrder === "newest")
-                        return b.applied_date.localeCompare(a.applied_date);
-                      return a.applied_date.localeCompare(b.applied_date);
-                    })
-                    .map((app) => {
+                  {filteredApplications.map((app) => {
                   const statusClass =
                     app.status === "applied" || app.status === "oa"
                       ? "status-pill status-pill--applied"

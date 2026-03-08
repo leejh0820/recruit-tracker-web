@@ -330,11 +330,99 @@ a {
   margin-top: 6px;
 }
 
+.connection-error {
+  padding: 16px;
+  background: rgba(220, 38, 38, 0.06);
+  border-radius: 12px;
+  border: 1px solid rgba(220, 38, 38, 0.2);
+}
+
+.connection-error code {
+  font-size: 11px;
+  background: rgba(0, 0, 0, 0.06);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.dashboard-section {
+  margin-bottom: 20px;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 24px;
+}
+
+.dashboard-chart {
+  padding: 4px 0;
+}
+
+.chart-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.chart-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chart-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.chart-label {
+  min-width: 64px;
+  color: var(--text-secondary);
+}
+
+.chart-bar-wrap {
+  flex: 1;
+  height: 18px;
+  background: rgba(148, 163, 184, 0.12);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.chart-bar {
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    var(--ice-melt) 0,
+    var(--almost-aqua) 100%
+  );
+  border-radius: 6px;
+  transition: width 0.3s ease;
+}
+
+.chart-bar--month {
+  background: linear-gradient(
+    to right,
+    var(--orchid-tint) 0,
+    var(--raindrops-roses) 100%
+  );
+}
+
+.chart-value {
+  min-width: 20px;
+  text-align: right;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
 .list-toolbar {
   display: flex;
   gap: 8px;
   margin-bottom: 10px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .table-wrapper {

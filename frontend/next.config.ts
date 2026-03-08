@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  reactCompiler: true,
+  reactCompiler: false, // true면 dev 서버 느려질 수 있음
   async rewrites() {
     return [
       {
