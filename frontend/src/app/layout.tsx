@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
+import ThemeToggle from "./ThemeToggle";
 
 export const metadata: Metadata = {
   title: "Recruit Tracker",
@@ -12,8 +14,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko">
+    <html lang="ko" suppressHydrationWarning>
       <body className="app-shell">
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var t=localStorage.getItem('theme');var d=window.matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.setAttribute('data-theme',t||(d?'dark':'light'));})();`,
+          }}
+        />
         <header className="app-header">
           <div className="app-header-inner">
             <div className="app-title">
@@ -25,10 +34,13 @@ export default function RootLayout({
                 </div>
               </div>
             </div>
-            <span className="badge-tag">
-              <span className="badge-dot" />
-              Personal tool
-            </span>
+            <div className="header-actions">
+              <ThemeToggle />
+              <span className="badge-tag">
+                <span className="badge-dot" />
+                Personal tool
+              </span>
+            </div>
           </div>
         </header>
         <main className="app-main">{children}</main>

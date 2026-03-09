@@ -113,6 +113,7 @@ recruit-tracker-web/
     2026-03-05-initial.md
     2026-03-05-search-filter-sort.md
     2026-03-08-dashboard-csv.md
+    2026-03-09-duplicate-warning.md
   run.sh                # 백엔드/프론트 실행 스크립트
   .gitignore
   README.md
@@ -134,6 +135,8 @@ recruit-tracker-web/
 - 검색/필터/정렬, 리스트에서 단계 인라인 수정
 - LinkedIn URL 안내 메시지, 공고 텍스트 파서 개선
 - **CSV 내보내기**, **대시보드/통계** (단계별·월별 차트)
+- **중복 경고** (같은 회사·직무 재등록 시 실시간 경고 + 저장 확인)
+- **다크/라이트 모드** (헤더 토글, localStorage 저장)
 - 연결 오류 시 안내 메시지 및 재시도
 
 ### 다음 개발 로드맵

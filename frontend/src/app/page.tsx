@@ -42,6 +42,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
+  const [duplicateWarning, setDuplicateWarning] = useState<Application | null>(null);
 
   const [form, setForm] = useState({
     applied_date: today,
@@ -158,6 +159,31 @@ export default function Home() {
     fetchApplications();
   }, []);
 
+  useEffect(() => {
+    const c = (form.company || "").trim().toLowerCase();
+    const p = (form.position_title || "").trim().toLowerCase();
+    const dup =
+      c && p
+        ? applications.find(
+            (a) =>
+              (a.company || "").trim().toLowerCase() === c &&
+              (a.position_title || "").trim().toLowerCase() === p
+          )
+        : null;
+    setDuplicateWarning(dup || null);
+  }, [form.company, form.position_title, applications]);
+
+  const findDuplicate = (company: string, position: string) => {
+    const c = (company || "").trim().toLowerCase();
+    const p = (position || "").trim().toLowerCase();
+    if (!c || !p) return null;
+    return applications.find(
+      (a) =>
+        (a.company || "").trim().toLowerCase() === c &&
+        (a.position_title || "").trim().toLowerCase() === p
+    );
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -165,6 +191,12 @@ export default function Home() {
     if (!form.company || !form.position_title || !form.applied_date) {
       setError("날짜, 회사, 직무는 필수입니다.");
       return;
+    }
+
+    const dup = findDuplicate(form.company, form.position_title);
+    if (dup) {
+      const msg = `이미 등록된 지원입니다: ${dup.company} - ${dup.position_title} (${dup.applied_date}). 그래도 저장할까요?`;
+      if (!confirm(msg)) return;
     }
 
     try {
@@ -599,6 +631,15 @@ export default function Home() {
               공고 텍스트로 자동 채우기
             </button>
           </div>
+          {duplicateWarning && (
+            <div
+              className="duplicate-warning"
+              style={{ gridColumn: "1 / -1", marginTop: 4 }}
+            >
+              ⚠️ 이미 등록된 지원: {duplicateWarning.company} -{" "}
+              {duplicateWarning.position_title} ({duplicateWarning.applied_date})
+            </div>
+          )}
           <div style={{ gridColumn: "1 / -1", marginTop: 8 }}>
             <button type="submit" className="btn-primary">
               지원 저장하기
@@ -813,7 +854,7 @@ export default function Home() {
                       </td>
                       <td>{app.source}</td>
                       <td>
-                        <span style={{ color: "#a5b4fc" }}>{app.company}</span>
+                        <span style={{ color: "var(--company-accent)" }}>{app.company}</span>
                       </td>
                       <td>{app.position_title}</td>
                       <td>{app.location}</td>
